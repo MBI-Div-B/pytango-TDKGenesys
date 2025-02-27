@@ -26,7 +26,6 @@ import enum
 # PROTECTED REGION ID(TDKLambdaGenesysSerial.additionnal_import) ENABLED START #
 import pyvisa
 import asyncio
-from tango import GreenMode
 import time
 import numpy as np
 import sys
@@ -64,7 +63,6 @@ class TDKLambdaGenesysSerial(Device):
             - Type:'DevString'
     """
     # PROTECTED REGION ID(TDKLambdaGenesysSerial.class_variable) ENABLED START #
-    green_mode = GreenMode.Asyncio
     # PROTECTED REGION END #    //  TDKLambdaGenesysSerial.class_variable
 
     # -----------------
@@ -143,9 +141,9 @@ class TDKLambdaGenesysSerial(Device):
     # General methods
     # ---------------
 
-    async def init_device(self):
+    def init_device(self):
         """Initialises the attributes and properties of the TDKLambdaGenesysSerial."""
-        await Device.init_device(self)
+        Device.init_device(self)
         # PROTECTED REGION ID(TDKLambdaGenesysSerial.init_device) ENABLED START #
         self._current = 0.0
         self._output = False
@@ -175,7 +173,7 @@ class TDKLambdaGenesysSerial(Device):
             sys.exit(1)
         # PROTECTED REGION END #    //  TDKLambdaGenesysSerial.init_device
 
-    async def always_executed_hook(self):
+    def always_executed_hook(self):
         """Method always executed before any TANGO command is executed."""
         # PROTECTED REGION ID(TDKLambdaGenesysSerial.always_executed_hook) ENABLED START #
         if self._is_ramping:
@@ -186,7 +184,7 @@ class TDKLambdaGenesysSerial(Device):
             self.set_state(DevState.ON)
         # PROTECTED REGION END #    //  TDKLambdaGenesysSerial.always_executed_hook
 
-    async def delete_device(self):
+    def delete_device(self):
         """Hook to delete resources allocated in init_device.
 
         This method allows for any memory or other resources allocated in the
@@ -201,84 +199,84 @@ class TDKLambdaGenesysSerial(Device):
     # Attributes methods
     # ------------------
 
-    async def read_current(self):
+    def read_current(self):
         # PROTECTED REGION ID(TDKLambdaGenesysSerial.current_read) ENABLED START #
         """Return the current attribute."""
-        ans = await self.query("MC?")
+        ans = self.query("MC?")
         return float(ans)
         # PROTECTED REGION END #    //  TDKLambdaGenesysSerial.current_read
 
-    async def read_current_limit(self):
+    def read_current_limit(self):
         # PROTECTED REGION ID(TDKLambdaGenesysSerial.current_limit_read) ENABLED START #
         """Return the current_limit attribute."""
-        ans = await self.query("PC?")
+        ans = self.query("PC?")
         self._hw_setpoint = float(ans)
         return self._hw_setpoint
         # PROTECTED REGION END #    //  TDKLambdaGenesysSerial.current_limit_read
 
-    async def write_current_limit(self, value):
+    def write_current_limit(self, value):
         """Set the current_limit attribute."""
         self._ramp_setpoint = value
         self._ramp_t0 = time.time()
         self._ramp_i0 = self._hw_setpoint
 
-    async def _write_current_limit(self, value):
+    def _write_current_limit(self, value):
         """Used to directly set current setpoint without aborting ramp"""
-        await self.query(f"PC {value}")
+        self.query(f"PC {value}")
 
-    async def read_limit(self):
+    def read_limit(self):
         # PROTECTED REGION ID(TDKLambdaGenesysSerial.limit_read) ENABLED START #
         """Return the limit attribute."""
-        ans = await self.query("MODE?")
+        ans = self.query("MODE?")
         return Limit[ans]
         # PROTECTED REGION END #    //  TDKLambdaGenesysSerial.limit_read
 
-    async def read_output(self):
+    def read_output(self):
         # PROTECTED REGION ID(TDKLambdaGenesysSerial.output_read) ENABLED START #
         """Return the output attribute."""
-        self._output = await self.query("OUT?") == "ON"
+        self._output = self.query("OUT?") == "ON"
         return self._output
         # PROTECTED REGION END #    //  TDKLambdaGenesysSerial.output_read
 
-    async def write_output(self, value):
+    def write_output(self, value):
         # PROTECTED REGION ID(TDKLambdaGenesysSerial.output_write) ENABLED START #
         """Set the output attribute."""
         v = "ON" if value else "OFF"
-        await self.query(f"OUT {v}")
+        self.query(f"OUT {v}")
         self.set_state(DevState.RUNNING if value else DevState.ON)
 
         # PROTECTED REGION END #    //  TDKLambdaGenesysSerial.output_write
 
-    async def read_voltage(self):
+    def read_voltage(self):
         # PROTECTED REGION ID(TDKLambdaGenesysSerial.voltage_read) ENABLED START #
         """Return the voltage attribute."""
-        ans = await self.query("MV?")
+        ans = self.query("MV?")
         return float(ans)
         # PROTECTED REGION END #    //  TDKLambdaGenesysSerial.voltage_read
 
-    async def read_voltage_limit(self):
+    def read_voltage_limit(self):
         # PROTECTED REGION ID(TDKLambdaGenesysSerial.voltage_limit_read) ENABLED START #
         """Return the voltage_limit attribute."""
-        ans = await self.query("PV?")
+        ans = self.query("PV?")
         return float(ans)
         # PROTECTED REGION END #    //  TDKLambdaGenesysSerial.voltage_limit_read
 
-    async def write_voltage_limit(self, value):
+    def write_voltage_limit(self, value):
         # PROTECTED REGION ID(TDKLambdaGenesysSerial.voltage_limit_write) ENABLED START #
         """Set the voltage_limit attribute."""
-        await self.query(f"PV {value}")
+        self.query(f"PV {value}")
         # PROTECTED REGION END #    //  TDKLambdaGenesysSerial.voltage_limit_write
 
-    async def read_ramp_rate(self):
+    def read_ramp_rate(self):
         return self._ramp_rate
 
-    async def write_ramp_rate(self, value):
+    def write_ramp_rate(self, value):
         self._ramp_rate = value
 
-    async def read_ramp_mode(self):
+    def read_ramp_mode(self):
         return self._ramp_mode
 
-    async def write_ramp_mode(self, value):
+    def write_ramp_mode(self, value):
         self._ramp_mode = value
     # --------
     # Commands
@@ -292,7 +290,7 @@ class TDKLambdaGenesysSerial(Device):
         doc_out="ans",
     )
     # @DebugIt()
-    async def query(self, argin):
+    def query(self, argin):
         # PROTECTED REGION ID(TDKLambdaGenesysSerial.query) ENABLED START #
         """
         Send query to device and return reply
@@ -311,7 +309,7 @@ class TDKLambdaGenesysSerial(Device):
     async def _ramp_task(self):
         """persistent task that updates current setpoints according to ramp settings."""
         while True:
-            await asyncio.sleep(0.1)
+            asyncio.sleep(0.1)
             if self._ramp_setpoint != self._hw_setpoint:
                 up = self._ramp_setpoint > self._hw_setpoint
                 do_ramp = (
@@ -320,7 +318,7 @@ class TDKLambdaGenesysSerial(Device):
                     or (self._ramp_mode == RampMode.UPDOWN)
                 )
                 if do_ramp:
-                    await asyncio.sleep(0.4)
+                    asyncio.sleep(0.4)
                     self._is_ramping = True
                     t = time.time() - self._ramp_t0
                     tmax = abs(self._ramp_setpoint - self._ramp_i0) / self._ramp_rate
@@ -330,7 +328,7 @@ class TDKLambdaGenesysSerial(Device):
                 else:
                     self._is_ramping = False
                     new_setp = self._ramp_setpoint
-                await self._write_current_limit(new_setp)
+                self._write_current_limit(new_setp)
             else:
                 self._is_ramping = False
 
