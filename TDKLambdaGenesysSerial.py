@@ -25,7 +25,7 @@ import enum
 # Additional import
 # PROTECTED REGION ID(TDKLambdaGenesysSerial.additionnal_import) ENABLED START #
 import pyvisa
-import asyncio
+from threading import Timer, Lock
 import time
 import numpy as np
 import sys
@@ -46,6 +46,12 @@ class RampMode(enum.IntEnum):
     UP = 1
     DOWN = 2
     UPDOWN = 3
+
+
+class RepeatTimer(Timer):
+    def run(self):
+        while not self.finished.wait(self.interval):
+            self.function(*self.args, **self.kwargs)
 
 
 class TDKLambdaGenesysSerial(Device):
@@ -155,9 +161,11 @@ class TDKLambdaGenesysSerial(Device):
         self._ramp_i0 = 0
         self._ramp_setpoint = 0
         self._hw_setpoint = 0
+        self._serial_lock = Lock()
         try:
             self.rm = pyvisa.ResourceManager("@py")
             self.inst = self.rm.open_resource(self.visa_resource)
+            self.inst.baud_rate = 19200
             self.inst.read_termination = '\r'
             self.inst.write_termination = '\r'
             self.inst.timeout = 500
@@ -165,8 +173,8 @@ class TDKLambdaGenesysSerial(Device):
             idn = self.inst.query("IDN?")
             self.debug_stream(f"Connection ok: {idn}")
             self.set_state(DevState.ON)
-            loop = asyncio.get_event_loop()
-            loop.create_task(self._ramp_task())
+            self._ramp_loop = RepeatTimer(0.3, self._ramp_task)
+            self._ramp_loop.start()
         except Exception as ex:
             self.error_stream(str(ex))
             self.set_state(DevState.OFF)
@@ -301,36 +309,35 @@ class TDKLambdaGenesysSerial(Device):
         :return:'DevString'
         ans
         """
-        ans = self.inst.query(argin)
+        with self._serial_lock:
+            ans = self.inst.query(argin)
         self.debug_stream(f"{argin} -> {ans}")
         return ans
         # PROTECTED REGION END #    //  TDKLambdaGenesysSerial.query
 
-    async def _ramp_task(self):
+    def _ramp_task(self):
         """persistent task that updates current setpoints according to ramp settings."""
-        while True:
-            asyncio.sleep(0.1)
-            if self._ramp_setpoint != self._hw_setpoint:
-                up = self._ramp_setpoint > self._hw_setpoint
-                do_ramp = (
-                    (self._ramp_mode == RampMode.UP and up)
-                    or (self._ramp_mode == RampMode.DOWN and (not up))
-                    or (self._ramp_mode == RampMode.UPDOWN)
-                )
-                if do_ramp:
-                    asyncio.sleep(0.4)
-                    self._is_ramping = True
-                    t = time.time() - self._ramp_t0
-                    tmax = abs(self._ramp_setpoint - self._ramp_i0) / self._ramp_rate
-                    sign = 1 if up else -1
-                    new_setp = self._ramp_i0 + sign * self._ramp_rate * t
-                    new_setp = self._ramp_setpoint if t >= tmax else new_setp
-                else:
-                    self._is_ramping = False
-                    new_setp = self._ramp_setpoint
-                self._write_current_limit(new_setp)
+        if self._ramp_setpoint != self._hw_setpoint:
+            up = self._ramp_setpoint > self._hw_setpoint
+            do_ramp = (
+                (self._ramp_mode == RampMode.UP and up)
+                or (self._ramp_mode == RampMode.DOWN and (not up))
+                or (self._ramp_mode == RampMode.UPDOWN)
+            )
+            if do_ramp:
+                # time.sleep(0.4)
+                self._is_ramping = True
+                t = time.time() - self._ramp_t0
+                tmax = abs(self._ramp_setpoint - self._ramp_i0) / self._ramp_rate
+                sign = 1 if up else -1
+                new_setp = self._ramp_i0 + sign * self._ramp_rate * t
+                new_setp = self._ramp_setpoint if t >= tmax else new_setp
             else:
                 self._is_ramping = False
+                new_setp = self._ramp_setpoint
+            self._write_current_limit(new_setp)
+        else:
+            self._is_ramping = False
 
 
 # ----------
