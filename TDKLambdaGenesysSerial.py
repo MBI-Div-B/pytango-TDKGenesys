@@ -85,6 +85,12 @@ class TDKLambdaGenesysSerial(Device):
         default_value="ASRL/dev/ttyUSB0::INSTR"
     )
 
+    baud_rate = device_property(
+        doc="Baud rate - only used for serial connection.",
+        dtype=int,
+        default_value=9600,
+    )
+
     # ----------
     # Attributes
     # ----------
@@ -165,7 +171,8 @@ class TDKLambdaGenesysSerial(Device):
         try:
             self.rm = pyvisa.ResourceManager("@py")
             self.inst = self.rm.open_resource(self.visa_resource)
-            self.inst.baud_rate = 19200
+            if "SRL" in self.visa_resource:
+                self.inst.baud_rate = self.baud_rate
             self.inst.read_termination = '\r'
             self.inst.write_termination = '\r'
             self.inst.timeout = 500
