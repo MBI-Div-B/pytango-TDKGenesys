@@ -27,7 +27,6 @@ import enum
 import pyvisa
 from threading import Timer, Lock
 import time
-import numpy as np
 import sys
 # PROTECTED REGION END #    //  TDKLambdaGenesysSerial.additionnal_import
 
@@ -146,7 +145,7 @@ class TDKLambdaGenesysSerial(Device):
         dtype='DevDouble',
         access=AttrWriteType.READ_WRITE,
         unit="A/s",
-        min_value = 0,
+        min_value=0,
     )
 
     # ---------------
@@ -207,6 +206,7 @@ class TDKLambdaGenesysSerial(Device):
         destructor and by the device Init command.
         """
         # PROTECTED REGION ID(TDKLambdaGenesysSerial.delete_device) ENABLED START #
+        self._ramp_loop.cancel()
         self.inst.close()
         self.rm.close()
         # PROTECTED REGION END #    //  TDKLambdaGenesysSerial.delete_device
